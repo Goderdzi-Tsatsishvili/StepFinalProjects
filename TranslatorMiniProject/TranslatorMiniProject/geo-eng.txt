@@ -1,0 +1,2 @@
+﻿gamarjoba=hello
+naxvamdis=goodbye

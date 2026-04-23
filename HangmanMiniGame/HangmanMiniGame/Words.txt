@@ -1,0 +1,8 @@
+﻿apple
+banana
+computer
+programming
+csharp
+itStep
+monitor
+keyboard
