@@ -10,11 +10,11 @@ namespace BookManager.Service.Interfaces
 {
     public interface IBookService
     {
-        List<GetBooksDTO> GetAllBooks();
+        Task<List<GetBooksDTO>> GetAllBooksAsync();
 
-        Book GetBookByName(string name);
-        int AddBook(CreateBookDTO dto);
-        int UpdateBook(UpdateBookDTO dto);
-        int DeleteBook(int id);
+        Task<Book> GetBookByNameAsync(string name);
+        Task<int> AddBookAsync(CreateBookDTO dto);
+        Task<int> UpdateBookAsync(UpdateBookDTO dto);
+        Task<int> DeleteBookAsync(int id);
     }
 }

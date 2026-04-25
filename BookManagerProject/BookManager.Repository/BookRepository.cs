@@ -11,97 +11,164 @@ namespace BookManager.Repository
 {
     public class BookRepository : IBookRepository
     {
-        private readonly string _filePath = "../../../../BookManager.Data/BookList.json";
+        private readonly string _filePath;
         private readonly List<Book> _books;
+        private readonly object _lock = new();
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-
-        public BookRepository()
+        public BookRepository(string filePath, List<Book> books)
         {
-            _books = LoadData(_filePath).ToList();
+            _filePath = filePath;
+            _books = books;
+        }
+
+        public static async Task<BookRepository> CreateAsync(string filePath)
+        {
+            var books = new List<Book>();
+
+            await foreach(var book in LoadDataAsync(filePath)) books.Add(book);
+
+            return new BookRepository(filePath, books);
         }
 
         public List<Book> GetBooks()
         {
-            return _books.ToList();
+            lock (_lock)
+            {
+                return _books.ToList();
+            }
         }
 
         public Book GetSingleBook(int id)
         {
-            return _books.FirstOrDefault(b => b.Id == id);
+            lock (_lock)
+            {
+                return _books.FirstOrDefault(b => b.Id == id);
+            }
         }
 
         public Book GetBookWithName(string name)
         {
-            return _books.FirstOrDefault(b => b.Name == name);
+            lock (_lock)
+            {
+                return _books.FirstOrDefault(b => b.Name == name);
+            }
         }
 
-        public int AddBook(Book newBook)
+        public async Task<int> AddBookAsync(Book newBook)
         {
-            newBook.Id = _books.Any() ? _books.Max(b => b.Id) + 1 : 1;
-            _books.Add(newBook);
+            lock (_lock)
+            {
+                newBook.Id = _books.Any() ? _books.Max(b => b.Id) + 1 : 1;
+                _books.Add(newBook);
+            }
 
-            SaveData();
+            await SaveDataAsync();
             return newBook.Id;
         }
 
-        public int UpdateBook(Book book)
+        public async Task<int> UpdateBookAsync(Book book)
         {
             bool updated = false;
 
-            var index = _books.FindIndex(b => b.Id == book.Id);
-            if(index >= 0)
+            lock (_lock)
             {
-                _books[index] = book;
-                updated = true;
+                var index = _books.FindIndex(b => b.Id == book.Id);
+                if (index >= 0)
+                {
+                    _books[index] = book;
+                    updated = true;
+                }
             }
 
-            if (updated) SaveData();
+            if (updated) await SaveDataAsync();
 
             return book.Id;
         }
 
-        public int DeleteBook(int id)
+        public async Task<int> DeleteBookAsync(int id)
         {
             Book book;
 
-            book = _books.FirstOrDefault(b => b.Id == id);
-            if (book == null) return -1;
+            lock (_lock)
+            {
+                book = _books.FirstOrDefault(b => b.Id == id);
+                if (book == null) return -1;
 
-            _books.Remove(book);
+                _books.Remove(book);
+            }
 
-            SaveData();
+            await SaveDataAsync();
             return book.Id;
         }
 
         #region Helper Methods
-        public IEnumerable<Book> LoadData(string filePath)
+        public static async IAsyncEnumerable<Book> LoadDataAsync(string filePath)
         {
-            if(!File.Exists(filePath)) return new List<Book>();
+            if (!File.Exists(filePath)) yield break;
 
-            var json = File.ReadAllText(filePath);
+            using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 8192, useAsync: true);
+            using var ms = new MemoryStream();
+            await fs.CopyToAsync(ms);
+            ms.Position = 0;
 
-            if (string.IsNullOrWhiteSpace(json))
-                return new List<Book>();
+            var json = Encoding.UTF8.GetString(ms.ToArray());
 
-            return JsonSerializer.Deserialize<List<Book>>(json) ?? new List<Book>();
+            List<Book> deserialized = null;
+            try
+            {
+                deserialized = JsonSerializer.Deserialize<List<Book>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                });
+            }
+            catch
+            {
+                yield break;
+            }
+
+            if (deserialized == null) yield break;
+
+            foreach(var book in deserialized)
+            {
+                yield return book;
+            }
+
+            //var json = File.ReadAllText(filePath);
+
+            //if (string.IsNullOrWhiteSpace(json))
+            //    return new List<Book>();
+
+            //return JsonSerializer.Deserialize<List<Book>>(json) ?? new List<Book>();
         }
 
-        public void SaveData()
+        private async Task SaveDataAsync()
         {
-            List<Book> snapshot;
-
-            snapshot = _books.ToList();
-
-            var jsonPayLoad = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions
+            await _semaphore.WaitAsync();
+            try
             {
-                WriteIndented = true
-            });
+                List<Book> snapshot;
 
-            using var fs = new FileStream(_filePath, FileMode.Create, FileAccess.Write,FileShare.None, bufferSize:8192);
+                lock (_lock)
+                {
+                    snapshot = _books.ToList();
+                }
 
-            var bytes = Encoding.UTF8.GetBytes(jsonPayLoad);
-            fs.Write(bytes , 0, bytes.Length);
-            fs.Flush();
+                var jsonPayLoad = JsonSerializer.Serialize(snapshot, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+                using var fs = new FileStream(_filePath, FileMode.Create, FileAccess.Write,FileShare.None, bufferSize:8192, useAsync: true);
+
+                var bytes = Encoding.UTF8.GetBytes(jsonPayLoad);
+                await fs.WriteAsync(bytes , 0, bytes.Length);
+                await fs.FlushAsync();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
         #endregion
     }

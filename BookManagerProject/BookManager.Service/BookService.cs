@@ -18,7 +18,7 @@ namespace BookManager.Service
             _bookRepository = bookRepository;
         }
 
-        public List<GetBooksDTO> GetAllBooks()
+        public async Task<List<GetBooksDTO>> GetAllBooksAsync()
         {
             var books = _bookRepository.GetBooks();
 
@@ -31,12 +31,12 @@ namespace BookManager.Service
             }).ToList();
         }
 
-        public Book GetBookByName(string name)
+        public async Task<Book> GetBookByNameAsync(string name)
         {
             return _bookRepository.GetBookWithName(name);
         }
 
-        public int AddBook(CreateBookDTO dto)
+        public async Task<int> AddBookAsync(CreateBookDTO dto)
         {
             var newBook = new Book
             {
@@ -45,10 +45,10 @@ namespace BookManager.Service
                 PublishingYear = dto.PublishingYear,
             };
 
-            return _bookRepository.AddBook(newBook);
+            return await _bookRepository.AddBookAsync(newBook);
         }
 
-        public int UpdateBook(UpdateBookDTO dto)
+        public async Task<int> UpdateBookAsync(UpdateBookDTO dto)
         {
             var bookToUpdate = _bookRepository.GetBooks()
                 .FirstOrDefault(b => b.Id == dto.Id);
@@ -59,17 +59,17 @@ namespace BookManager.Service
             bookToUpdate.Author = dto.Author;
             bookToUpdate.PublishingYear = dto.PublishingYear;
 
-            _bookRepository.UpdateBook(bookToUpdate);
+            await _bookRepository.UpdateBookAsync(bookToUpdate);
 
             return 1;
         }
 
-        public int DeleteBook(int id)
+        public async Task<int> DeleteBookAsync(int id)
         {
             var bookToDelete = _bookRepository.GetSingleBook(id);
             if(bookToDelete == null) return -1;
 
-            _bookRepository.DeleteBook(id);
+            await _bookRepository.DeleteBookAsync(id);
             return 1;
         }
     }

@@ -12,8 +12,8 @@ namespace BookManager.Repository.Interfaces
         List<Book> GetBooks();
         Book GetSingleBook(int id);
         Book GetBookWithName(string name);
-        int AddBook(Book newBook);
-        int UpdateBook(Book book);
-        int DeleteBook(int id);
+        Task<int> AddBookAsync(Book newBook);
+        Task<int> UpdateBookAsync(Book book);
+        Task<int> DeleteBookAsync(int id);
     }
 }

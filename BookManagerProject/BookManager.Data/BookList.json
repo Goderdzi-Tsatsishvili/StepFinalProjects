@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "Id": 1,
+    "Name": "Pride and Prejudice",
+    "Author": "Jane Austen",
+    "PublishingYear": 1813
+  },
+  {
+    "Id": 2,
+    "Name": "Moby-Dick",
+    "Author": "Herman Melville",
+    "PublishingYear": 1851
+  },
+  {
+    "Id": 4,
+    "Name": "The Brothers Karamazov",
+    "Author": "Fyodor Dostoevsky",
+    "PublishingYear": 1880
+  },
+  {
+    "Id": 5,
+    "Name": "War and Peace",
+    "Author": "Leo Tolstoy",
+    "PublishingYear": 1869
+  },
+  {
+    "Id": 6,
+    "Name": "1984",
+    "Author": "George Orwell",
+    "PublishingYear": 1949
+  },
+  {
+    "Id": 7,
+    "Name": "To Kill a Mockingbird",
+    "Author": "Harper Lee",
+    "PublishingYear": 1960
+  }
+]
